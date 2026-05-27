@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}My Blog{% endblock %}</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        nav a { margin-right: 16px; text-decoration: none; }
+        article { border-bottom: 1px solid #eee; padding: 20px 0; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="{% url 'post_create' %}">New Post</a>
+        <a href="{% url 'generate_post' %}">Generate with AI</a>
+        <a href="/admin">Admin</a>
+    </nav>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>

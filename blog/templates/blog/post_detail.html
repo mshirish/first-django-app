@@ -1,0 +1,19 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}{{ post.title }} — My Blog{% endblock %}
+
+{% block content %}
+  <article>
+    <h1>{{ post.title }}</h1>
+    <small>
+        {{ post.created_at|date:"F j, Y" }}
+        {% if post.author %} · by {{ post.author.username }}{% endif %}
+    </small>
+    <p>{{ post.content }}</p>
+    {% if post.tags.all %}
+      <p>Tags: {% for tag in post.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+  </article>
+  <a href="{% url 'home' %}">← Back to home</a>
+  <a href="{% url 'post_edit' slug=post.slug %}">Edit</a>
+{% endblock %}

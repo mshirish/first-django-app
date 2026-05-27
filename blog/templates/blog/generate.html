@@ -1,0 +1,23 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}Generate Post{% endblock %}
+
+{% block content %}
+  <h1>Generate a Blog Post with AI</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    <div>
+      <label for="topic">Topic</label><br>
+      <input 
+        type="text" 
+        name="topic" 
+        id="topic" 
+        placeholder="e.g. why django is great for AI apps"
+        style="width: 100%; padding: 8px; margin-top: 8px;"
+      >
+    </div>
+    <br>
+    <button type="submit">Generate Post</button>
+  </form>
+{% endblock %}
