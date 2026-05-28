@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
@@ -5,12 +7,15 @@ from .models import Post, Tag
 from .forms import PostForm
 from .services import generate_blog_post
 
+logger = logging.getLogger('blog')
+
 def home(request):
     posts = Post.objects.filter(published=True).order_by('-created_at')
     tag = request.GET.get('tag')
     if tag:
         posts = posts.filter(tags__name=tag)
     all_tags = Tag.objects.all()
+    logger.debug('Home page loaded: %d posts, tag_filter=%s', posts.count(), tag)
     return render(request, 'blog/home.html', {
         'posts': posts,
         'tag': tag,
@@ -19,6 +24,7 @@ def home(request):
 
 def post_detail(request, slug):
     post = get_object_or_404(Post, slug=slug, published=True)
+    logger.info('Post viewed: slug=%s', slug)
     return render(request, 'blog/post_detail.html', {'post': post})
 
 """
@@ -34,7 +40,10 @@ def post_create(request):
             post.author = request.user      # attach the logged-in user
             post.save()
             form.save_m2m()                 # save ManyToMany fields (tags)
+            logger.info('Post created: slug=%s author=%s', post.slug, request.user)
             return redirect(post.get_absolute_url())
+        else:
+            logger.warning('Post creation failed validation: user=%s errors=%s', request.user, form.errors)
     else:
         form = PostForm()
     return render(request, 'blog/post_form.html', {'form': form})
@@ -59,7 +68,10 @@ def post_edit(request, slug):
             post = form.save(commit=False)
             post.save()
             form.save_m2m()
+            logger.info('Post updated: slug=%s author=%s', post.slug, request.user)
             return redirect(post.get_absolute_url())
+        else:
+            logger.warning('Post edit failed validation: slug=%s user=%s errors=%s', slug, request.user, form.errors)
     else:
         form = PostForm(instance=post)  # ← pre-fills the form with existing data
     return render(request, 'blog/post_form.html', {'form': form})
@@ -68,15 +80,21 @@ def post_edit(request, slug):
 def generate_post(request):
     if request.method == 'POST':
         topic = request.POST.get('topic')
-        generated = generate_blog_post(topic)
-        post = Post.objects.create(
-            title=generated['title'],
-            content=generated['content'],
-            slug=slugify(generated['title']),
-            author=request.user,
-            published=False
-        )
-        return redirect(post.get_absolute_url())
+        logger.info('AI post generation started: topic=%s user=%s', topic, request.user)
+        try:
+            generated = generate_blog_post(topic)
+            post = Post.objects.create(
+                title=generated['title'],
+                content=generated['content'],
+                slug=slugify(generated['title']),
+                author=request.user,
+                published=False
+            )
+            logger.info('AI post generation succeeded: slug=%s', post.slug)
+            return redirect(post.get_absolute_url())
+        except Exception:
+            logger.exception('AI post generation failed: topic=%s user=%s', topic, request.user)
+            raise
     return render(request, 'blog/generate.html')
 
 """

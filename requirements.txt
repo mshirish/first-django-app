@@ -8,3 +8,4 @@ python-decouple==3.8
 python-dotenv
 whitenoise
 gunicorn
+dj-database-url 

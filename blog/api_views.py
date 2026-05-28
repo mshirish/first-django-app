@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import generics, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,6 +8,8 @@ from django.utils.text import slugify
 from .models import Post
 from .serializers import PostSerializer
 from .services import generate_blog_post
+
+logger = logging.getLogger('blog')
 
 
 """
@@ -31,7 +35,8 @@ class PostListAPI(generics.ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        post = serializer.save(author=self.request.user)
+        logger.info('API post created: slug=%s author=%s', post.slug, self.request.user)
 
 
 class PostDetailAPI(generics.RetrieveUpdateDestroyAPIView):
@@ -50,15 +55,16 @@ class GeneratePostAPI(APIView):
         topic = request.data.get('topic')
 
         if not topic:
+            logger.warning('API generate request missing topic: user=%s', request.user)
             return Response(
                 {'error': 'topic is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        logger.info('API post generation started: topic=%s user=%s', topic, request.user)
         try:
             generated = generate_blog_post(topic)
 
-            # Save the generated post to the database
             post = Post.objects.create(
                 title=generated['title'],
                 content=generated['content'],
@@ -67,10 +73,12 @@ class GeneratePostAPI(APIView):
                 published=False  # save as draft first
             )
 
+            logger.info('API post generation succeeded: slug=%s', post.slug)
             serializer = PostSerializer(post)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.exception('API post generation failed: topic=%s user=%s', topic, request.user)
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

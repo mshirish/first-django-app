@@ -1,11 +1,12 @@
+import logging
+
 import anthropic
 from django.conf import settings
 
+logger = logging.getLogger('blog')
+
 def generate_blog_post(topic: str) -> dict:
-    """
-    Takes a topic string and returns a dict with
-    generated title and content from Claude.
-    """
+    logger.debug('Calling Claude API: topic=%s', topic)
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
     message = client.messages.create(
@@ -25,8 +26,8 @@ def generate_blog_post(topic: str) -> dict:
     )
 
     response_text = message.content[0].text
+    logger.debug('Claude API response received: tokens_used=%s', message.usage.output_tokens)
 
-    # Parse the response
     lines = response_text.strip().split('\n')
     title = ''
     content = ''
@@ -37,6 +38,9 @@ def generate_blog_post(topic: str) -> dict:
         elif line.startswith('CONTENT:'):
             content = '\n'.join(lines[i:]).replace('CONTENT:', '').strip()
             break
+
+    if not title or not content:
+        logger.warning('Claude response missing title or content: topic=%s', topic)
 
     return {
         'title': title,
